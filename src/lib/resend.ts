@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export interface CheckInEmailData {
   workerName: string;
@@ -16,7 +18,7 @@ export interface CheckInEmailData {
 export async function sendCheckInEmail(toEmails: string[], data: CheckInEmailData) {
   const mapsLink = `https://maps.google.com/?q=${data.latitude},${data.longitude}`;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL!,
     to: toEmails,
     subject: `[ConstructFlow] ${data.workerName} checked in at ${data.siteName}`,
@@ -49,7 +51,7 @@ export async function sendInviteEmail({
   companyName: string;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.RESEND_FROM_EMAIL!,
     to,
     subject: `You've been invited to join ${companyName} on ConstructFlow`,
