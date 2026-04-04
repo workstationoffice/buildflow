@@ -87,7 +87,7 @@ export default function OnboardingPage() {
               Built for interior design &amp; construction teams
             </h2>
             <p className="text-white/55 mt-3 text-sm leading-relaxed">
-              Track your field team's visits, manage deals, and keep every project on track — all in one place.
+              Track your field team&apos;s visits, manage deals, and keep every project on track — all in one place.
             </p>
           </div>
           <div className="space-y-3">
@@ -121,7 +121,7 @@ export default function OnboardingPage() {
                 <Mail className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="font-semibold text-emerald-900">You've been invited!</p>
+                <p className="font-semibold text-emerald-900">You&apos;ve been invited!</p>
                 <p className="text-emerald-700 text-sm mt-0.5">
                   Join <strong>{pendingInvite.company}</strong> as <strong>{pendingInvite.role}</strong>
                 </p>

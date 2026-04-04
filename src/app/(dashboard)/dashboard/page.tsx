@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{greeting}, {user.name.split(" ")[0]} 👋</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Here's what's happening at your company today.</p>
+        <p className="text-slate-500 text-sm mt-0.5">Here&apos;s what&apos;s happening at your company today.</p>
       </div>
 
       {/* Stats */}

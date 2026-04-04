@@ -70,7 +70,7 @@ export default function InviteUserModal({ onClose, onSuccess }: Props) {
               <Mail className="w-5 h-5 text-white" />
             </div>
             <h2 className="text-lg font-bold text-white">Invite Team Member</h2>
-            <p className="text-white/65 text-sm">They'll receive an email to sign up</p>
+            <p className="text-white/65 text-sm">They&apos;ll receive an email to sign up</p>
           </div>
           <button onClick={onClose} className="text-white/60 hover:text-white transition-colors mt-1">
             <X className="w-5 h-5" />
