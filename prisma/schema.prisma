@@ -1,0 +1,439 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── TENANT ────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  timezone    String   @default("Asia/Bangkok")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users            User[]
+  sites            Site[]
+  pipelineStages   PipelineStage[]
+  customers        Customer[]
+  deals            Deal[]
+  visits           Visit[]
+  calendarPlans    CalendarPlan[]
+  rolePermissions  RolePermission[]
+  storageConfig    StorageConfig?
+  notificationConfig NotificationConfig[]
+}
+
+// ─── USERS & ROLES ─────────────────────────────────────────────────────────
+
+enum Department {
+  MANAGEMENT
+  SALES
+  DESIGN
+  OPERATIONS
+}
+
+enum RoleType {
+  COMPANY_ADMIN
+  SALES_MANAGER
+  SALES_SUPERVISOR
+  SALES_EXECUTIVE
+  DESIGN_MANAGER
+  DESIGN_SUPERVISOR
+  DESIGN_OFFICER
+  FOREMAN_MANAGER
+  FOREMAN_SUPERVISOR
+  FOREMAN
+}
+
+model User {
+  id             String     @id @default(cuid())
+  clerkId        String     @unique
+  tenantId       String
+  email          String
+  name           String
+  avatarUrl      String?
+  phone          String?
+  lineGroupId    String?
+  department     Department
+  role           RoleType
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visitsAsWorker     Visit[]         @relation("VisitWorker")
+  calendarPlans      CalendarPlan[]
+  dealsAssigned      DealAssignee[]
+  ownedCustomers     Customer[]      @relation("CustomerOwner")
+  changelog          ChangeLog[]
+  notificationConfig NotificationConfig[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// ─── PERMISSIONS ───────────────────────────────────────────────────────────
+
+enum Permission {
+  VIEW_OWN_VISITS
+  VIEW_TEAM_VISITS
+  VIEW_DEPT_VISITS
+  VIEW_ALL_VISITS
+  MANAGE_USERS
+  MANAGE_SITES
+  VIEW_ALL_PLANS
+  VIEW_DASHBOARD
+  VIEW_OWN_DEALS
+  VIEW_TEAM_DEALS
+  VIEW_DEPT_DEALS
+  VIEW_ALL_DEALS
+  MANAGE_CUSTOMERS
+  MANAGE_PIPELINE_STAGES
+  MANAGE_PERMISSIONS
+  MANAGE_STORAGE
+  MANAGE_TENANT
+}
+
+model RolePermission {
+  id          String     @id @default(cuid())
+  tenantId    String
+  role        RoleType
+  permission  Permission
+  granted     Boolean    @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role, permission])
+  @@index([tenantId])
+}
+
+// ─── SITES ─────────────────────────────────────────────────────────────────
+
+model Site {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  address   String
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visits  Visit[]
+
+  @@index([tenantId])
+}
+
+// ─── VISITS ────────────────────────────────────────────────────────────────
+
+enum VisitStatus {
+  PLANNED
+  CHECKED_IN
+  CHECKED_OUT
+}
+
+enum DeviceType {
+  MOBILE
+  DESKTOP
+}
+
+model CalendarPlan {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  siteId      String?
+  title       String
+  description String?
+  plannedDate DateTime
+  dealId      String?
+
+  googleEventId    String?
+  microsoftEventId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deal   Deal?  @relation(fields: [dealId], references: [id])
+
+  @@index([tenantId, userId])
+  @@index([tenantId, plannedDate])
+}
+
+model Visit {
+  id          String      @id @default(cuid())
+  tenantId    String
+  userId      String
+  siteId      String?
+  dealId      String?
+
+  status        VisitStatus @default(PLANNED)
+  isUnplanned   Boolean     @default(false)
+
+  // Check-in
+  checkInAt        DateTime?
+  checkInLat       Float?
+  checkInLng       Float?
+  checkInAddress   String?
+  checkInSelfieUrl String?
+  checkInDevice    DeviceType?
+
+  // Check-out
+  checkOutAt      DateTime?
+  checkOutLat     Float?
+  checkOutLng     Float?
+  checkOutAddress String?
+  checkOutDevice  DeviceType?
+  jobSummary      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation("VisitWorker", fields: [userId], references: [id], onDelete: Cascade)
+  site   Site?  @relation(fields: [siteId], references: [id])
+  deal   Deal?  @relation(fields: [dealId], references: [id])
+
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@index([tenantId, checkInAt])
+}
+
+// ─── CUSTOMERS ─────────────────────────────────────────────────────────────
+
+enum CustomerType {
+  PERSONAL
+  COMPANY
+}
+
+model Customer {
+  id          String       @id @default(cuid())
+  tenantId    String
+  ownerId     String
+  type        CustomerType @default(PERSONAL)
+  name        String
+  email       String?
+  phone       String?
+  lineId      String?
+  address     String?
+  taxId       String?
+  companyName String?
+  notes       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner          User            @relation("CustomerOwner", fields: [ownerId], references: [id])
+  contactPersons ContactPerson[]
+  deals          Deal[]
+  changelog      ChangeLog[]
+
+  @@index([tenantId])
+  @@index([tenantId, ownerId])
+}
+
+model ContactPerson {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  position   String?
+  phone      String?
+  email      String?
+  lineId     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+// ─── PIPELINE STAGES ───────────────────────────────────────────────────────
+
+model PipelineStage {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  color     String   @default("#6366f1")
+  order     Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deals  Deal[]
+
+  @@unique([tenantId, order])
+  @@index([tenantId])
+}
+
+// ─── DEALS ─────────────────────────────────────────────────────────────────
+
+model Deal {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  customerId          String
+  stageId             String
+  title               String
+  value               Float    @default(0)
+  currency            String   @default("THB")
+  siteLocation        String?
+  budget              Float?
+  requirements        String?
+  nextContactDate     DateTime?
+  estimatedCloseDate  DateTime?
+  notes               String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  stage         PipelineStage   @relation(fields: [stageId], references: [id])
+  assignees     DealAssignee[]
+  activities    DealActivity[]
+  attachments   DealAttachment[]
+  visits        Visit[]
+  calendarPlans CalendarPlan[]
+  changelog     ChangeLog[]
+
+  @@index([tenantId])
+  @@index([tenantId, customerId])
+  @@index([tenantId, stageId])
+}
+
+model DealAssignee {
+  id     String @id @default(cuid())
+  dealId String
+  userId String
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId, userId])
+}
+
+// ─── DEAL ACTIVITIES ───────────────────────────────────────────────────────
+
+enum ActivityType {
+  NOTE
+  CALL
+  VISIT
+  EMAIL
+  MEETING
+  PROGRESS_UPDATE
+}
+
+model DealActivity {
+  id          String       @id @default(cuid())
+  dealId      String
+  userId      String?
+  type        ActivityType
+  title       String
+  description String?
+  createdAt   DateTime     @default(now())
+
+  deal        Deal             @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  attachments DealAttachment[]
+
+  @@index([dealId])
+}
+
+// ─── DEAL ATTACHMENTS ──────────────────────────────────────────────────────
+
+enum StorageProvider {
+  R2
+  SHAREPOINT
+  ONEDRIVE
+  GOOGLE_DRIVE
+}
+
+model DealAttachment {
+  id           String          @id @default(cuid())
+  dealId       String
+  activityId   String?
+  name         String
+  url          String
+  size         Int?
+  mimeType     String?
+  provider     StorageProvider @default(R2)
+  externalId   String?
+  uploadedById String?
+  createdAt    DateTime        @default(now())
+
+  deal     Deal          @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  activity DealActivity? @relation(fields: [activityId], references: [id])
+
+  @@index([dealId])
+}
+
+// ─── STORAGE CONFIG ────────────────────────────────────────────────────────
+
+model StorageConfig {
+  id               String          @id @default(cuid())
+  tenantId         String          @unique
+  provider         StorageProvider @default(R2)
+  sharepointSiteId String?
+  onedriveFolder   String?
+  googleDriveFolderId String?
+  updatedAt        DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// ─── NOTIFICATION CONFIG ───────────────────────────────────────────────────
+
+model NotificationConfig {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  lineGroupId String?
+  emailEnabled Boolean @default(true)
+  lineEnabled  Boolean @default(true)
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+}
+
+// ─── CHANGELOG ─────────────────────────────────────────────────────────────
+
+enum ChangeLogEntity {
+  USER
+  CUSTOMER
+  CONTACT_PERSON
+  DEAL
+}
+
+model ChangeLog {
+  id         String          @id @default(cuid())
+  tenantId   String?
+  entityType ChangeLogEntity
+  entityId   String
+  userId     String?
+  action     String
+  field      String?
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime        @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id])
+  customer Customer? @relation(fields: [entityId], references: [id], map: "changelog_customer_fk")
+  deal     Deal?     @relation(fields: [entityId], references: [id], map: "changelog_deal_fk")
+
+  @@index([entityType, entityId])
+  @@index([userId])
+}
