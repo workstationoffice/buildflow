@@ -1,9 +1,11 @@
 import { Client } from "@line/bot-sdk";
 
-const lineClient = new Client({
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN!,
-  channelSecret: process.env.LINE_CHANNEL_SECRET!,
-});
+function getLineClient() {
+  return new Client({
+    channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN!,
+    channelSecret: process.env.LINE_CHANNEL_SECRET!,
+  });
+}
 
 export interface CheckInLineData {
   workerName: string;
@@ -29,7 +31,7 @@ export async function sendCheckInLineNotification(groupId: string, data: CheckIn
     .filter(Boolean)
     .join("\n");
 
-  await lineClient.pushMessage(groupId, {
+  await getLineClient().pushMessage(groupId, {
     type: "text",
     text: message,
   });
