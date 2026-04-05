@@ -133,6 +133,7 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
     e.preventDefault();
     if (taxId && taxIdError) { setError(taxIdError); return; }
     if (type === "PERSONAL" && phoneDigits && phoneError) { setError(phoneError); return; }
+    if (type === "PERSONAL" && !phoneDigits && !email && !lineId) { setError("Please provide at least one contact: Phone, Email, or LINE ID"); return; }
 
     setError("");
     setLoading(true);
@@ -297,6 +298,9 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
                 <input value={lineId} onChange={(e) => setLineId(e.target.value)} placeholder="@lineid"
                   className="w-full border-2 border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
               </div>
+              {!phoneDigits && !email && !lineId && (
+                <p className="text-xs text-amber-600 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" />At least one of Phone, Email, or LINE ID is required</p>
+              )}
             </div>
           )}
 
