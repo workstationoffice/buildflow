@@ -7,11 +7,16 @@ import {
   FileText, Plus, Trash2, ArrowLeft, Hash, AlertCircle, CheckCircle,
   Home, Truck, Star,
 } from "lucide-react";
+import ThaiAddressFields from "@/components/ui/thai-address-fields";
 
 interface AddressRow {
   id?: string;
   label: string;
   address: string;
+  subDistrict: string;
+  district: string;
+  province: string;
+  postalCode: string;
   isDefaultBilling: boolean;
   isDefaultShipping: boolean;
 }
@@ -75,7 +80,7 @@ function validatePhone(digits: string): string {
 }
 function toStoredPhone(digits: string) { return digits ? `+66${digits}` : ""; }
 
-const emptyAddress = (): AddressRow => ({ label: "", address: "", isDefaultBilling: false, isDefaultShipping: false });
+const emptyAddress = (first = false): AddressRow => ({ label: "", address: "", subDistrict: "", district: "", province: "", postalCode: "", isDefaultBilling: first, isDefaultShipping: first });
 const emptyContact = (): ContactPersonRow => ({ name: "", position: "", phone: "", email: "", lineId: "", isPrimary: false });
 
 export default function EditCustomerForm({ customer }: { customer: Customer }) {
@@ -94,8 +99,15 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
 
   const [addresses, setAddresses] = useState<AddressRow[]>(
     customer.addresses.length > 0
-      ? customer.addresses.map((a) => ({ ...a, label: a.label ?? "", id: a.id }))
-      : [emptyAddress()]
+      ? customer.addresses.map((a) => ({
+          ...a,
+          label:       a.label ?? "",
+          subDistrict: (a as any).subDistrict ?? "",
+          district:    (a as any).district ?? "",
+          province:    (a as any).province ?? "",
+          postalCode:  (a as any).postalCode ?? "",
+        }))
+      : [emptyAddress(true)]
   );
 
   const [contacts, setContacts] = useState<ContactPersonRow[]>(
@@ -142,7 +154,7 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
         ...rest,
         phone: rest.phone ? toStoredPhone(normalizePhoneInput(rest.phone)) : undefined,
       }));
-      const filledAddresses = addresses.filter((a) => a.address.trim()).map(({ id: _id, ...rest }) => rest);
+      const filledAddresses = addresses.filter((a) => a.address.trim() || a.subDistrict.trim() || a.province.trim()).map(({ id: _id, ...rest }) => rest);
 
       const res = await fetch(`/api/customers/${customer.id}`, {
         method: "PATCH",
@@ -320,7 +332,7 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
               </div>
               Addresses
             </h2>
-            <button type="button" onClick={() => setAddresses((p) => [...p, emptyAddress()])}
+            <button type="button" onClick={() => setAddresses((p) => [...p, emptyAddress(false)])}
               className="flex items-center gap-1.5 text-xs text-violet-600 font-semibold bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition-colors">
               <Plus className="w-3.5 h-3.5" /> Add Address
             </button>
@@ -347,20 +359,17 @@ export default function EditCustomerForm({ customer }: { customer: Customer }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-600">Label</label>
-                    <input value={a.label} onChange={(e) => updateAddress(i, "label", e.target.value)}
-                      placeholder="e.g. สำนักงานใหญ่, สาขา 1"
-                      className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-xs font-medium text-slate-600">Address <span className="text-red-400">*</span></label>
-                    <input value={a.address} onChange={(e) => updateAddress(i, "address", e.target.value)}
-                      placeholder="Full address..."
-                      className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600">Label</label>
+                  <input value={a.label} onChange={(e) => updateAddress(i, "label", e.target.value)}
+                    placeholder="e.g. สำนักงานใหญ่, สาขา 1"
+                    className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
                 </div>
+
+                <ThaiAddressFields
+                  value={{ address: a.address, subDistrict: a.subDistrict, district: a.district, province: a.province, postalCode: a.postalCode }}
+                  onChange={(v) => setAddresses((prev) => prev.map((x, idx) => idx === i ? { ...x, ...v } : x))}
+                />
 
                 <div className="flex items-center gap-4 pt-1">
                   <label className={`flex items-center gap-2 cursor-pointer select-none text-sm font-medium rounded-lg px-3 py-1.5 transition-colors ${

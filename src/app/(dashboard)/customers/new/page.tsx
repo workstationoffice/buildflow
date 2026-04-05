@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ThaiAddressFields from "@/components/ui/thai-address-fields";
 import {
   Building2, User, Phone, Mail, MessageCircle, MapPin,
   FileText, Plus, Trash2, ArrowLeft, Search, CheckCircle,
@@ -11,6 +12,10 @@ import {
 interface AddressRow {
   label: string;
   address: string;
+  subDistrict: string;
+  district: string;
+  province: string;
+  postalCode: string;
   isDefaultBilling: boolean;
   isDefaultShipping: boolean;
 }
@@ -32,7 +37,7 @@ interface DbdResult {
   address: string;
 }
 
-const emptyAddress  = (): AddressRow       => ({ label: "", address: "", isDefaultBilling: false, isDefaultShipping: false });
+const emptyAddress  = (first = false): AddressRow => ({ label: "", address: "", subDistrict: "", district: "", province: "", postalCode: "", isDefaultBilling: first, isDefaultShipping: first });
 const emptyContact  = (): ContactPersonRow => ({ name: "", position: "", phone: "", email: "", lineId: "", isPrimary: false });
 
 // ── Tax ID helpers ────────────────────────────────���─────────────────────────
@@ -77,8 +82,8 @@ export default function NewCustomerPage() {
   const [email, setEmail]             = useState("");
   const [lineId, setLineId]           = useState("");
 
-  // Addresses (multi)
-  const [addresses, setAddresses]     = useState<AddressRow[]>([emptyAddress()]);
+  // Addresses (multi) — first address starts as default billing + shipping
+  const [addresses, setAddresses]     = useState<AddressRow[]>([emptyAddress(true)]);
 
   // Contact persons (Company)
   const [contacts, setContacts]       = useState<ContactPersonRow[]>([emptyContact()]);
@@ -119,7 +124,7 @@ export default function NewCustomerPage() {
       setDbdResult(data);
       if (data.nameTh) setCompanyName(data.nameTh);
       if (data.address) {
-        setAddresses([{ label: "สำนักงานใหญ่", address: data.address, isDefaultBilling: true, isDefaultShipping: true }]);
+        setAddresses([{ label: "สำนักงานใหญ่", address: data.address, subDistrict: "", district: "", province: "", postalCode: "", isDefaultBilling: true, isDefaultShipping: true }]);
       }
       setType("COMPANY");
     } catch (e: any) { setDbdError(e.message); }
@@ -137,7 +142,7 @@ export default function NewCustomerPage() {
       const filledContacts   = contacts.filter((c) => c.name.trim()).map((c) => ({
         ...c, phone: c.phone ? toStoredPhone(normalizePhoneInput(c.phone)) : undefined,
       }));
-      const filledAddresses  = addresses.filter((a) => a.address.trim());
+      const filledAddresses  = addresses.filter((a) => a.address.trim() || a.subDistrict.trim() || a.province.trim());
       const res = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -345,7 +350,7 @@ export default function NewCustomerPage() {
               </div>
               Addresses
             </h2>
-            <button type="button" onClick={() => setAddresses((p) => [...p, emptyAddress()])}
+            <button type="button" onClick={() => setAddresses((p) => [...p, emptyAddress(false)])}
               className="flex items-center gap-1.5 text-xs text-violet-600 font-semibold bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg transition-colors">
               <Plus className="w-3.5 h-3.5" /> Add Address
             </button>
@@ -372,20 +377,17 @@ export default function NewCustomerPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-600">Label</label>
-                    <input value={a.label} onChange={(e) => updateAddress(i, "label", e.target.value)}
-                      placeholder="e.g. สำนักงานใหญ่, สาขา 1"
-                      className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    <label className="text-xs font-medium text-slate-600">Address <span className="text-red-400">*</span></label>
-                    <input value={a.address} onChange={(e) => updateAddress(i, "address", e.target.value)}
-                      placeholder="Full address..."
-                      className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-600">Label</label>
+                  <input value={a.label} onChange={(e) => updateAddress(i, "label", e.target.value)}
+                    placeholder="e.g. สำนักงานใหญ่, สาขา 1"
+                    className="w-full border border-slate-200 bg-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500 transition-colors" />
                 </div>
+
+                <ThaiAddressFields
+                  value={{ address: a.address, subDistrict: a.subDistrict, district: a.district, province: a.province, postalCode: a.postalCode }}
+                  onChange={(v) => setAddresses((prev) => prev.map((x, idx) => idx === i ? { ...x, ...v } : x))}
+                />
 
                 <div className="flex items-center gap-4 pt-1">
                   <label className={`flex items-center gap-2 cursor-pointer select-none text-sm font-medium rounded-lg px-3 py-1.5 transition-colors ${

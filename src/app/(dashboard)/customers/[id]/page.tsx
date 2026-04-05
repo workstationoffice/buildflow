@@ -123,8 +123,17 @@ export default async function Customer360Page({ params }: { params: Promise<{ id
                       {a.isDefaultBilling  && <span className="flex items-center gap-0.5 text-xs font-semibold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded-full"><Home className="w-3 h-3" />Billing</span>}
                       {a.isDefaultShipping && <span className="flex items-center gap-0.5 text-xs font-semibold text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full"><Truck className="w-3 h-3" />Shipping</span>}
                     </div>
-                    <div className="text-xs text-slate-500 flex items-start gap-1">
-                      <MapPin className="w-3 h-3 mt-0.5 shrink-0" />{a.address}
+                    <div className="text-xs text-slate-500 flex items-start gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 mt-0.5 shrink-0 text-slate-400" />
+                      <div>
+                        {a.address && <div>{a.address}</div>}
+                        {((a as any).subDistrict || (a as any).district) && (
+                          <div>{[(a as any).subDistrict, (a as any).district].filter(Boolean).join(" · ")}</div>
+                        )}
+                        {((a as any).province || (a as any).postalCode) && (
+                          <div>{[(a as any).province, (a as any).postalCode].filter(Boolean).join(" ")}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

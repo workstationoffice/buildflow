@@ -250,7 +250,11 @@ model CustomerAddress {
   id                String   @id @default(cuid())
   customerId        String
   label             String?
-  address           String
+  address           String?  // ที่อยู่/ถนน (street / house no.)
+  subDistrict       String?  // ตำบล/แขวง
+  district          String?  // อำเภอ/เขต
+  province          String?  // จังหวัด
+  postalCode        String?  // รหัสไปรษณีย์
   isDefaultBilling  Boolean  @default(false)
   isDefaultShipping Boolean  @default(false)
   createdAt         DateTime @default(now())
